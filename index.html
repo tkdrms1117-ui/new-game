@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Love Run</title>
+    <title>Love Flight</title>
     <style>
-        /* 폰트 로드 (구글 웹폰트) */
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         body {
@@ -14,20 +13,24 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f7f7f7;
+            background-color: #222;
             font-family: 'VT323', monospace;
             overflow: hidden;
         }
 
         #game-container {
             position: relative;
-            border: 2px solid #333;
-            background-color: #fff;
-            box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
+            border: 4px solid #fff;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+            width: 800px;
+            height: 400px;
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
         }
 
         #ui-layer {
@@ -36,73 +39,83 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* 클릭은 캔버스로 통과 */
+            pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
+            color: white;
         }
 
         .hidden { display: none !important; }
 
-        h1 { font-size: 40px; margin: 0 0 10px 0; color: #ff6b6b; text-shadow: 2px 2px 0 #333; }
-        p { font-size: 20px; color: #555; }
-        
-        button {
-            pointer-events: auto;
-            background: #ff6b6b;
-            border: 2px solid #333;
-            color: white;
-            padding: 10px 20px;
-            font-family: 'VT323', monospace;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 3px 3px 0 #333;
+        h1 { 
+            font-size: 50px; 
+            margin: 0 0 20px 0; 
+            color: #ff69b4; 
+            text-shadow: 4px 4px 0 #333; 
+            letter-spacing: 5px;
         }
-        button:active {
-            transform: translate(2px, 2px);
-            box-shadow: 1px 1px 0 #333;
+        
+        p { font-size: 24px; color: #ddd; margin-bottom: 30px; }
+
+        .btn {
+            pointer-events: auto;
+            background: #ff69b4;
+            border: 2px solid white;
+            color: white;
+            padding: 15px 30px;
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn:hover { background-color: #ff1493; }
+        .btn:active { transform: scale(0.95); }
+
+        #letter-box {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border: 4px solid #ff69b4;
+            padding: 30px;
+            max-width: 80%;
+            border-radius: 10px;
+            animation: popIn 0.5s ease;
         }
 
-        /* 편지 스타일 */
-        #letter-box {
-            background: white;
-            border: 2px solid #333;
-            padding: 20px;
-            max-width: 80%;
-            box-shadow: 5px 5px 0 rgba(0,0,0,0.1);
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="300"></canvas>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
         
         <div id="ui-layer">
             <div id="start-screen">
-                <h1>LOVE RUN</h1>
-                <p>스페이스바를 눌러 점프하세요</p>
-                <button onclick="startGame()">게임 시작</button>
+                <h1>LOVE FLIGHT</h1>
+                <p>방향키 [↑] [↓] 로 장애물을 피하세요</p>
+                <button class="btn" onclick="startGame()">MISSION START</button>
             </div>
             
             <div id="game-over-screen" class="hidden">
-                <h1>GAME OVER</h1>
-                <p>사랑에는 끈기가 필요한 법!</p>
-                <button onclick="resetGame()">다시 도전</button>
+                <h1 style="color: #ff4757;">CRASHED!</h1>
+                <p><br>다시 도전할까요?</p>
+                <button class="btn" onclick="startGame()">TRY AGAIN</button>
             </div>
 
             <div id="clear-screen" class="hidden">
                 <div id="letter-box">
-                    <h1>축하해! ❤️</h1>
-                    <p>
-                        (이곳에 편지 내용을 적어주세요)<br>
-                        장애물을 피하느라 고생했어.<br>
-                        앞으로도 우리 앞에 놓인 장애물들을<br>
-                        이렇게 가볍게 뛰어넘으며 함께하자.<br>
-                        사랑해!
+                    <h2 style="color:#ff69b4; margin-top:0;"></h2>
+                    <p style="font-size: 20px; color: #444; line-height: 1.6;">
+
                     </p>
+                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">처음으로</button>
                 </div>
             </div>
         </div>
@@ -112,172 +125,197 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // 게임 상태 변수
-    let frames = 0;
-    let score = 0;
-    let gameSpeed = 4;
-    let isGaming = false;
-    let animationId;
-    const GRAVITY = 0.6;
-    const CLEAR_SCORE = 1000; // 이 점수가 되면 클리어 (편지 나옴)
-
     // ==========================================
-    // 1. 도트(픽셀) 데이터 정의 (0:투명, 1:색칠)
+    // 1. 도트 데이터 (플레이어 캐릭터 수정됨)
     // ==========================================
     
-    // 분홍 곰 (16x16)
-    const bearSprite = [
-        "0000110000110000",
-        "0001111001111000",
-        "0011111111111100",
-        "0111111111111110",
-        "0110111111110110", // 눈 부분 (0으로 구멍 뚫음)
-        "1111111001111111", // 코 부분
-        "1111111111111111",
-        "1111100000011111", // 입
-        "1111111111111111",
-        "0111111111111110",
-        "0011111111111100",
-        "0001111111111000",
-        "0001100000011000", // 다리 시작
-        "0001100000011000",
-        "0011100000111000",
-        "0011000000110000"
+    // 플레이어: 분홍색 캐릭터 (12x12)
+    // 0: 투명, 1: 연분홍, 2: 진분홍 (코, 배), 3: 갈색 (외곽선)
+    const playerSprite = [
+        "000333333000",
+        "003111111300",
+        "031311113130",
+        "311111111113",
+        "311311113113",
+        "311112211113",
+        "311121121113",
+        "031122221130",
+        "031111111130",
+        "003121121300",
+        "003212212300",
+        "000333333000"
     ];
 
-    // 장애물 (선인장 대신 하트 깨진 모양 등 - 여기선 심플한 벽돌/장애물)
-    const obstacleSprite = [
-        "0001111000",
-        "0011111100",
-        "0111001110",
-        "0110000110",
-        "1111111111",
-        "1101111011",
-        "1101111011",
-        "1111111111"
+    const wallTop = [
+        "111111", "111111", "011110", "001100", "001100", "001100", "000100"
     ];
-
-    // 구름
-    const cloudSprite = [
-        "000001111000000",
-        "000111111110000",
-        "011111111111100",
-        "111111111111110",
-        "011111111111110",
-        "000111111110000"
+    const wallBottom = [
+        "000100", "001100", "001100", "001100", "011110", "111111", "111111"
+    ];
+    const block = [
+        "00111100", "01111110", "11000011", "11000011", "11000011", "01111110", "00111100"
     ];
 
     // ==========================================
-    // 2. 도트 그리기 함수 (핵심)
+    // 2. 게임 변수
     // ==========================================
-    function drawPixelArt(ctx, spriteMap, startX, startY, pixelSize, color) {
-        ctx.fillStyle = color;
-        for (let row = 0; row < spriteMap.length; row++) {
-            const line = spriteMap[row];
-            for (let col = 0; col < line.length; col++) {
-                if (line[col] === '1') {
-                    ctx.fillRect(startX + col * pixelSize, startY + row * pixelSize, pixelSize, pixelSize);
+    let animationId;
+    let isGaming = false;
+    let score = 0;
+    let gameSpeed = 5;
+    let spawnRate = 90;
+    let frames = 0;
+
+    const keys = { ArrowUp: false, ArrowDown: false };
+    const CLEAR_SCORE = 1500;
+
+    // ==========================================
+    // 3. 클래스 정의 (drawSprite 함수 수정됨)
+    // ==========================================
+
+    // 픽셀 그리기 함수 - 색상표 지원
+    function drawSprite(ctx, sprite, x, y, size, colorMap) {
+        for (let r = 0; r < sprite.length; r++) {
+            for (let c = 0; c < sprite[r].length; c++) {
+                const pixel = sprite[r][c];
+                if (pixel !== '0' && colorMap[pixel]) {
+                    ctx.fillStyle = colorMap[pixel];
+                    ctx.fillRect(x + c * size, y + r * size, size, size);
                 }
             }
         }
     }
 
-    // ==========================================
-    // 3. 게임 객체 클래스
-    // ==========================================
-
     class Player {
         constructor() {
-            this.width = 48;  // 16칸 * 3px
-            this.height = 48; // 16칸 * 3px
+            this.pixelSize = 4;
+            this.w = 12 * this.pixelSize;
+            this.h = 12 * this.pixelSize;
             this.x = 50;
             this.y = 200;
-            this.dy = 0;
-            this.jumpPower = -12;
-            this.originalY = 200;
-            this.grounded = true;
-            this.color = '#ff9ff3'; // 곰 색상 (분홍)
-        }
-
-        draw() {
-            // 점프 중일 땐 조금 위로, 다리를 움직이는 효과는 생략하고 심플하게
-            drawPixelArt(ctx, bearSprite, this.x, this.y, 3, this.color);
+            this.speed = 6;
+            // 플레이어 색상표 정의
+            this.colorMap = {
+                '1': '#ffb6c1', // 연분홍
+                '2': '#ff69b4', // 진분홍
+                '3': '#8b4513'  // 갈색 (외곽선)
+            };
+            this.shadowColorMap = {
+                '1': 'rgba(0,0,0,0.5)', '2': 'rgba(0,0,0,0.5)', '3': 'rgba(0,0,0,0.5)'
+            };
         }
 
         update() {
-            // 점프 로직
-            if (this.y < this.originalY) {
-                this.dy += GRAVITY;
-                this.grounded = false;
-            } else {
-                this.dy = 0;
-                this.y = this.originalY;
-                this.grounded = true;
-            }
-            this.y += this.dy;
+            if (keys.ArrowUp) this.y -= this.speed;
+            if (keys.ArrowDown) this.y += this.speed;
+
+            if (this.y < 0) this.y = 0;
+            if (this.y + this.h > canvas.height) this.y = canvas.height - this.h;
+
             this.draw();
         }
 
-        jump() {
-            if (this.grounded) {
-                this.dy = this.jumpPower;
-            }
+        draw() {
+            // 그림자
+            drawSprite(ctx, playerSprite, this.x + 4, this.y + 4, this.pixelSize, this.shadowColorMap);
+            // 본체
+            drawSprite(ctx, playerSprite, this.x, this.y, this.pixelSize, this.colorMap);
         }
     }
 
     class Obstacle {
         constructor() {
-            this.w = 30;
-            this.h = 40; // 8칸 * 5px
             this.x = canvas.width;
-            this.y = 210; // 바닥 위치에 맞춤
-            this.color = '#54a0ff'; // 장애물 색상 (파랑)
-        }
+            this.size = 5;
+            this.markedForDeletion = false;
 
-        draw() {
-            drawPixelArt(ctx, obstacleSprite, this.x, this.y, 4, this.color);
+            const type = Math.random();
+            
+            if (type < 0.33) {
+                this.sprite = wallBottom;
+                this.w = 6 * this.size;
+                this.h = 7 * this.size;
+                this.renderH = Math.random() * 50 + 50; 
+                this.y = canvas.height - this.renderH;
+                this.color = '#ff4757';
+                this.mode = 'bottom';
+            } else if (type < 0.66) {
+                this.sprite = wallTop;
+                this.w = 6 * this.size;
+                this.renderH = Math.random() * 50 + 50;
+                this.y = 0;
+                this.color = '#7bed9f';
+                this.mode = 'top';
+            } else {
+                this.sprite = block;
+                this.w = 8 * this.size;
+                this.h = 7 * this.size;
+                this.y = Math.random() * (canvas.height - 100) + 50;
+                this.renderH = this.h;
+                this.color = '#ffa502';
+                this.mode = 'mid';
+            }
+            // 장애물용 단순 색상표
+            this.colorMap = { '1': this.color };
         }
 
         update() {
             this.x -= gameSpeed;
+            if (this.x + this.w < 0) this.markedForDeletion = true;
             this.draw();
+        }
+
+        draw() {
+            if (this.mode === 'bottom') {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x + this.size, this.y + 20, this.w - this.size*2, canvas.height); 
+                drawSprite(ctx, this.sprite, this.x, this.y, this.size, this.colorMap);
+            } else if (this.mode === 'top') {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x + this.size, 0, this.w - this.size*2, this.renderH);
+                drawSprite(ctx, this.sprite, this.x, this.renderH - 10, this.size, this.colorMap);
+            } else {
+                drawSprite(ctx, this.sprite, this.x, this.y, this.size, this.colorMap);
+            }
         }
     }
 
-    class Cloud {
+    class Star {
         constructor() {
-            this.x = canvas.width + Math.random() * 200;
-            this.y = Math.random() * 100;
-            this.speed = Math.random() * 1 + 0.5;
-        }
-        draw() {
-            drawPixelArt(ctx, cloudSprite, this.x, this.y, 4, '#dfe4ea');
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2;
+            this.speed = Math.random() * 0.5 + 0.1;
         }
         update() {
-            this.x -= this.speed;
-            if (this.x < -100) this.x = canvas.width;
-            this.draw();
+            this.x -= this.speed * (gameSpeed * 0.5);
+            if (this.x < 0) {
+                this.x = canvas.width;
+                this.y = Math.random() * canvas.height;
+            }
+            ctx.fillStyle = 'white';
+            ctx.fillRect(this.x, this.y, this.size, this.size);
         }
     }
 
     // ==========================================
-    // 4. 게임 루프 및 제어
+    // 4. 메인 로직
     // ==========================================
     
     let player;
     let obstacles = [];
-    let clouds = [];
-    
+    let stars = [];
+
     function init() {
         player = new Player();
         obstacles = [];
-        clouds = [];
         score = 0;
         frames = 0;
-        gameSpeed = 4;
+        gameSpeed = 5;
+        spawnRate = 90;
         
-        // 구름 몇 개 생성
-        for(let i=0; i<3; i++) clouds.push(new Cloud());
+        stars = [];
+        for(let i=0; i<50; i++) stars.push(new Star());
     }
 
     function startGame() {
@@ -289,68 +327,52 @@
         animate();
     }
 
-    function resetGame() {
-        startGame();
-    }
-
     function animate() {
         if (!isGaming) return;
         
         animationId = requestAnimationFrame(animate);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 배경(구름)
-        clouds.forEach(c => c.update());
-
-        // 바닥 선
-        ctx.beginPath();
-        ctx.moveTo(0, 248);
-        ctx.lineTo(canvas.width, 248);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // 플레이어
-        player.update();
-
-        // 장애물 관리
-        if (frames % 120 === 0) { // 장애물 생성 주기
-            obstacles.push(new Obstacle());
-            gameSpeed += 0.1; // 점점 빨라짐
-        }
-
-        for (let i = 0; i < obstacles.length; i++) {
-            let o = obstacles[i];
-            o.update();
-
-            // 충돌 체크 (단순 사각형 충돌)
-            if (player.x < o.x + o.w &&
-                player.x + player.width > o.x &&
-                player.y < o.y + o.h &&
-                player.y + player.height > o.y) {
-                
-                gameOver();
-            }
-
-            // 화면 밖으로 나가면 제거
-            if (o.x + o.w < 0) {
-                obstacles.splice(i, 1);
-                i--;
-                score += 10;
-            }
-        }
-
-        // 점수 표시
-        ctx.fillStyle = '#333';
-        ctx.font = '20px VT323';
-        ctx.fillText("SCORE: " + score, 20, 30);
-
-        // 클리어 조건 (예: 점수 1000점)
-        if (score >= CLEAR_SCORE) {
-            gameClear();
-        }
+        stars.forEach(star => star.update());
 
         frames++;
+        if (score > 0 && score % 500 === 0 && frames % 60 === 0) {
+            gameSpeed += 0.5;
+            spawnRate = Math.max(40, spawnRate - 5);
+        }
+
+        if (frames % spawnRate === 0) {
+            obstacles.push(new Obstacle());
+            frames += Math.floor(Math.random() * 20) - 10; 
+        }
+
+        obstacles.forEach((o, index) => {
+            o.update();
+            const pBox = { x: player.x+5, y: player.y+5, w: player.w-10, h: player.h-10 };
+            let oBox = { x: o.x+5, y: o.y+5, w: o.w-10, h: o.renderH || o.h };
+            if (o.mode === 'bottom') oBox.h = 1000;
+            if (o.mode === 'top') { oBox.y = 0; oBox.h = o.renderH; }
+
+            if (pBox.x < oBox.x + oBox.w && pBox.x + pBox.w > oBox.x &&
+                pBox.y < oBox.y + oBox.h && pBox.y + pBox.h > oBox.y) {
+                gameOver();
+            }
+            if (o.markedForDeletion) {
+                obstacles.splice(index, 1);
+                score += 10;
+            }
+        });
+
+        player.update();
+
+        ctx.fillStyle = 'white';
+        ctx.font = '24px VT323';
+        ctx.fillText(`SCORE: ${score}`, 20, 40);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '16px VT323';
+        ctx.fillText(`SPEED: ${gameSpeed.toFixed(1)}`, 20, 65);
+
+        if (score >= CLEAR_SCORE) gameClear();
     }
 
     function gameOver() {
@@ -365,25 +387,16 @@
         document.getElementById('clear-screen').classList.remove('hidden');
     }
 
-    // 키보드 이벤트
-    window.addEventListener('keydown', function(e) {
-        if (e.code === 'Space') {
-            if (isGaming) {
-                player.jump();
-            } else if (!document.getElementById('start-screen').classList.contains('hidden')) {
-                // 시작 화면일 때 스페이스 누르면 시작
-                startGame();
-            }
-        }
+    window.addEventListener('keydown', e => {
+        if (e.code === 'ArrowUp') keys.ArrowUp = true;
+        if (e.code === 'ArrowDown') keys.ArrowDown = true;
+        if(['ArrowUp', 'ArrowDown', 'Space'].indexOf(e.code) > -1) e.preventDefault();
     });
 
-    // 모바일 터치 이벤트
-    window.addEventListener('touchstart', function(e) {
-        if (isGaming) {
-            player.jump();
-        }
+    window.addEventListener('keyup', e => {
+        if (e.code === 'ArrowUp') keys.ArrowUp = false;
+        if (e.code === 'ArrowDown') keys.ArrowDown = false;
     });
-
 </script>
 </body>
 </html>
