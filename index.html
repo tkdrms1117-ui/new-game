@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Space Survival</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
@@ -10,13 +10,24 @@
         body {
             margin: 0;
             display: flex;
+            flex-direction: column; /* Stack game and controls vertically */
             justify-content: center;
             align-items: center;
             height: 100vh;
             background-color: #1a1a1a;
             font-family: 'VT323', monospace;
             overflow: hidden;
-            touch-action: none; /* Disable double-tap zoom */
+            touch-action: none;
+        }
+
+        /* Game Wrapper to hold canvas */
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         #game-container {
@@ -24,12 +35,8 @@
             border: 4px solid #444;
             background-color: #000;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
-            
-            /* Responsive Sizing */
-            width: 95vw;
-            max-width: 800px;
-            aspect-ratio: 2 / 1; 
-            height: auto;
+            width: 100%;
+            aspect-ratio: 2 / 1;
         }
 
         canvas {
@@ -58,15 +65,15 @@
 
         /* Responsive Text Sizes */
         h1 { 
-            font-size: 5vw; 
-            margin: 0 0 20px 0; 
+            font-size: 8vw; 
+            margin: 0 0 10px 0; 
             color: #00d2d3; 
             text-shadow: 4px 4px 0 #333; 
             letter-spacing: 5px;
         }
         @media (min-width: 800px) { h1 { font-size: 60px; } }
         
-        p { font-size: 2.5vw; color: #ccc; margin-bottom: 30px; }
+        p { font-size: 4vw; color: #ccc; margin-bottom: 20px; }
         @media (min-width: 800px) { p { font-size: 24px; } }
 
         .btn {
@@ -74,9 +81,9 @@
             background: #00d2d3;
             border: 2px solid white;
             color: #000;
-            padding: 15px 30px;
+            padding: 10px 20px;
             font-family: 'VT323', monospace;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.1s;
@@ -93,97 +100,111 @@
             box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
         }
 
-        /* Mobile Controls (D-Pad) */
+        /* Mobile Controls Area (Separated from game screen) */
+        #controls-area {
+            width: 100%;
+            max-width: 600px;
+            height: 180px; /* Fixed height for controls */
+            display: none; /* Hidden on PC */
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
         #mobile-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 20;
-            display: none; /* Hidden on desktop by default, shown via JS/Media Query */
+            display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            pointer-events: auto;
-            opacity: 0.7;
+            opacity: 0.9;
         }
 
         .control-row {
             display: flex;
-            gap: 10px;
+            gap: 20px; /* More spacing between buttons */
         }
 
         .d-btn {
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(0, 210, 211, 0.5);
             border-radius: 50%;
-            color: white;
-            font-size: 20px;
+            color: #00d2d3;
+            font-size: 24px;
             display: flex;
             justify-content: center;
             align-items: center;
             user-select: none;
-            touch-action: none;
+            touch-action: none; /* Crucial for responsiveness */
             cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         
         .d-btn:active {
             background: rgba(0, 210, 211, 0.6);
+            color: white;
             transform: scale(0.95);
         }
 
-        /* Show controls on touch devices or small screens */
+        /* Mobile Layout Adjustments */
         @media (hover: none) and (pointer: coarse), (max-width: 768px) {
-            #mobile-controls {
+            #controls-area {
                 display: flex;
+            }
+            #game-wrapper {
+                width: 95vw;
             }
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- Internal resolution fixed at 800x400 for logic, CSS handles display size -->
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        
-        <div id="ui-layer">
-            <!-- Start Screen -->
-            <div id="start-screen">
-                <h1>SPACE SURVIVAL</h1>
-                <p>PC: ARROW KEYS / MOBILE: TOUCH PAD</p>
-                <button class="btn" onclick="startGame()">LAUNCH</button>
-            </div>
+    <div id="game-wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
             
-            <!-- Game Over Screen -->
-            <div id="game-over-screen" class="hidden">
-                <h1 style="color: #ff4757;">CRITICAL FAILURE</h1>
-                <p>COLLISION DETECTED</p>
-                <button class="btn" onclick="startGame()">RETRY MISSION</button>
-            </div>
+            <div id="ui-layer">
+                <!-- Start Screen -->
+                <div id="start-screen">
+                    <h1>SPACE SURVIVAL</h1>
+                    <p>SURVIVE THE ASTEROID BELT</p>
+                    <button class="btn" onclick="startGame()">LAUNCH MISSION</button>
+                </div>
+                
+                <!-- Game Over Screen -->
+                <div id="game-over-screen" class="hidden">
+                    <h1 style="color: #ff4757;">CRITICAL FAILURE</h1>
+                    <p>COLLISION DETECTED</p>
+                    <button class="btn" onclick="startGame()">RETRY MISSION</button>
+                </div>
 
-            <!-- Clear Screen -->
-            <div id="clear-screen" class="hidden">
-                <div id="report-box">
-                    <h2 style="margin-top:0;">MISSION ACCOMPLISHED</h2>
-                    <p style="font-size: 16px; color: #fff; line-height: 1.6;">
-                        Orbit stabilized.<br>
-                        System integrity: 100%<br><br>
-                        Waiting for next command...
-                    </p>
-                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">RETURN</button>
+                <!-- Clear Screen -->
+                <div id="clear-screen" class="hidden">
+                    <div id="report-box">
+                        <h2 style="margin-top:0;">MISSION ACCOMPLISHED</h2>
+                        <p style="font-size: 16px; color: #fff; line-height: 1.6;">
+                            Orbit stabilized.<br>
+                            System integrity: 100%<br><br>
+                            Waiting for next command...
+                        </p>
+                        <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">RETURN</button>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Mobile Controls Overlay -->
+    <!-- Controls Area Below Game -->
+    <div id="controls-area">
         <div id="mobile-controls">
             <div class="control-row">
                 <div class="d-btn" id="btn-up">▲</div>
             </div>
             <div class="control-row">
                 <div class="d-btn" id="btn-left">◀</div>
-                <div class="d-btn" style="visibility: hidden;"></div> <!-- Spacer -->
+                <div class="d-btn" style="visibility: hidden;"></div>
                 <div class="d-btn" id="btn-right">▶</div>
             </div>
             <div class="control-row">
@@ -257,7 +278,7 @@
     ];
 
     // ==========================================
-    // 2. Game Variables
+    // 2. Game Variables & FPS Control
     // ==========================================
     let animationId;
     let isGaming = false;
@@ -265,6 +286,11 @@
     let gameSpeed = 5;
     let spawnRate = 60; 
     let frames = 0;
+
+    // FPS Control Variables
+    let then = Date.now();
+    const fps = 60;
+    const fpsInterval = 1000 / fps; // ~16.67ms
 
     const keys = { 
         ArrowUp: false, 
@@ -414,6 +440,10 @@
         document.getElementById('game-over-screen').classList.add('hidden');
         document.getElementById('clear-screen').classList.add('hidden');
         isGaming = true;
+        
+        // Reset FPS timer
+        then = Date.now();
+        
         init();
         animate();
     }
@@ -421,72 +451,80 @@
     function animate() {
         if (!isGaming) return;
         
-        animationId = requestAnimationFrame(animate);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        requestAnimationFrame(animate);
 
-        stars.forEach(star => star.update());
+        // FPS Throttling Logic
+        const now = Date.now();
+        const elapsed = now - then;
 
-        frames++;
-        
-        if (score > 0 && score % 200 === 0 && frames % 10 === 0) {
-            gameSpeed += 0.8; 
-            spawnRate = Math.max(15, spawnRate - 2); 
-        }
+        // Only update if enough time has passed (Limit to 60FPS)
+        if (elapsed > fpsInterval) {
+            then = now - (elapsed % fpsInterval);
 
-        if (frames % spawnRate === 0) {
-            obstacles.push(new Obstacle());
-            frames += Math.floor(Math.random() * 10) - 5; 
-        }
+            // --- Game Update Logic Below ---
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        obstacles.forEach((o, index) => {
-            o.update();
+            stars.forEach(star => star.update());
+
+            frames++;
             
-            const pBox = { x: player.x + 8, y: player.y + 8, w: player.w - 16, h: player.h - 16 };
-            const oBox = { x: o.x + 4, y: o.y + 4, w: o.w - 8, h: o.h - 8 };
-
-            if (pBox.x < oBox.x + oBox.w && pBox.x + pBox.w > oBox.x &&
-                pBox.y < oBox.y + oBox.h && pBox.y + pBox.h > oBox.y) {
-                gameOver();
+            if (score > 0 && score % 200 === 0 && frames % 10 === 0) {
+                gameSpeed += 0.8; 
+                spawnRate = Math.max(15, spawnRate - 2); 
             }
 
-            if (o.markedForDeletion) {
-                obstacles.splice(index, 1);
-                score += 10;
+            if (frames % spawnRate === 0) {
+                obstacles.push(new Obstacle());
+                frames += Math.floor(Math.random() * 10) - 5; 
             }
-        });
 
-        player.update();
+            obstacles.forEach((o, index) => {
+                o.update();
+                
+                const pBox = { x: player.x + 8, y: player.y + 8, w: player.w - 16, h: player.h - 16 };
+                const oBox = { x: o.x + 4, y: o.y + 4, w: o.w - 8, h: o.h - 8 };
 
-        ctx.fillStyle = '#00d2d3';
-        ctx.font = '24px VT323';
-        ctx.fillText(`SCORE: ${score}`, 20, 40);
-        
-        ctx.fillStyle = '#ff6b6b';
-        ctx.font = '20px VT323';
-        ctx.fillText(`VELOCITY: ${(gameSpeed * 10).toFixed(0)} km/s`, 20, 70);
+                if (pBox.x < oBox.x + oBox.w && pBox.x + pBox.w > oBox.x &&
+                    pBox.y < oBox.y + oBox.h && pBox.y + pBox.h > oBox.y) {
+                    gameOver();
+                }
 
-        if (score >= CLEAR_SCORE) {
-            gameClear();
+                if (o.markedForDeletion) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                }
+            });
+
+            player.update();
+
+            ctx.fillStyle = '#00d2d3';
+            ctx.font = '24px VT323';
+            ctx.fillText(`SCORE: ${score}`, 20, 40);
+            
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = '20px VT323';
+            ctx.fillText(`VELOCITY: ${(gameSpeed * 10).toFixed(0)} km/s`, 20, 70);
+
+            if (score >= CLEAR_SCORE) {
+                gameClear();
+            }
         }
     }
 
     function gameOver() {
         isGaming = false;
-        cancelAnimationFrame(animationId);
         document.getElementById('game-over-screen').classList.remove('hidden');
     }
 
     function gameClear() {
         isGaming = false;
-        cancelAnimationFrame(animationId);
         document.getElementById('clear-screen').classList.remove('hidden');
     }
 
     // ==========================================
-    // 5. Input Handling (Keyboard & Touch)
+    // 5. Input Handling
     // ==========================================
 
-    // Keyboard
     window.addEventListener('keydown', e => {
         if (keys.hasOwnProperty(e.code)) {
             keys[e.code] = true;
@@ -500,39 +538,20 @@
         }
     });
 
-    // Mobile Touch Controls Function
     function bindTouch(elementId, keyCode) {
         const btn = document.getElementById(elementId);
         
-        // Touch Start
         btn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent default behavior (scroll/zoom)
+            e.preventDefault();
             keys[keyCode] = true;
             btn.style.backgroundColor = 'rgba(0, 210, 211, 0.6)';
         }, { passive: false });
 
-        // Touch End
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
             keys[keyCode] = false;
-            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
         }, { passive: false });
-
-        // Mouse Events (for testing on PC with mouse)
-        btn.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            keys[keyCode] = true;
-            btn.style.backgroundColor = 'rgba(0, 210, 211, 0.6)';
-        });
-        btn.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            keys[keyCode] = false;
-            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-        });
-        btn.addEventListener('mouseleave', (e) => {
-            keys[keyCode] = false;
-            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-        });
     }
 
     bindTouch('btn-up', 'ArrowUp');
