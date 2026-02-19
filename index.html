@@ -3,389 +3,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Love Connection Game</title>
+    <title>Love Run</title>
     <style>
-        @font-face {
-            font-family: 'PixelFont';
-            src: url('https://fonts.cdnfonts.com/s/193/PressStart2P-Regular.ttf') format('truetype');
-        }
+        /* 폰트 로드 (구글 웹폰트) */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
         body {
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background-color: #f0f0f0;
-            font-family: 'PixelFont', sans-serif;
+            height: 100vh;
+            background-color: #f7f7f7;
+            font-family: 'VT323', monospace;
+            overflow: hidden;
         }
+
         #game-container {
             position: relative;
-            width: 800px;
-            height: 400px;
-            overflow: hidden;
-            background-color: #a0d8ef; /* 하늘색 배경 */
+            border: 2px solid #333;
+            background-color: #fff;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
         }
+
         canvas {
             display: block;
-            /* 픽셀 아트 선명하게 */
-            image-rendering: optimizeSpeed;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: optimize-contrast;
-            image-rendering: pixelated;
-            -ms-interpolation-mode: nearest-neighbor;
         }
-        #game-over-screen {
+
+        #ui-layer {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            color: #333;
-            display: none; /* 처음에는 숨김 */
-            z-index: 10;
-        }
-        #game-over-screen h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        #game-over-screen p {
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        .score-board {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 클릭은 캔버스로 통과 */
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 10px;
+            align-items: center;
+            text-align: center;
         }
-        .score-board img {
-            width: 40px;
-            height: 40px;
-            image-rendering: pixelated;
-        }
-        .score-details {
-            text-align: left;
-        }
-        .score-details div {
-            font-size: 12px;
-        }
-        #restart-button {
-            padding: 10px 20px;
-            font-size: 14px;
-            font-family: 'PixelFont', sans-serif;
-            cursor: pointer;
-            background-color: #f0f0f0;
+
+        .hidden { display: none !important; }
+
+        h1 { font-size: 40px; margin: 0 0 10px 0; color: #ff6b6b; text-shadow: 2px 2px 0 #333; }
+        p { font-size: 20px; color: #555; }
+        
+        button {
+            pointer-events: auto;
+            background: #ff6b6b;
             border: 2px solid #333;
-            border-radius: 5px;
-            box-shadow: 2px 2px 0 #333;
+            color: white;
+            padding: 10px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0 #333;
         }
-        #restart-button:active {
-            box-shadow: none;
+        button:active {
             transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 #333;
         }
-        #score {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 16px;
-            color: #333;
+
+        /* 편지 스타일 */
+        #letter-box {
+            background: white;
+            border: 2px solid #333;
+            padding: 20px;
+            max-width: 80%;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
+
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-        <div id="score">SCORE: 0<br>HI: 0</div>
-        <div id="game-over-screen">
-            <h1>GAME OVER</h1>
-            <p>YOUR LOVE CONNECTION WAS INTERRPETED!</p>
-            <div class="score-board">
-                <img src="assets/bear_dead.png" alt="Sad Bear">
-                <div class="score-details">
-                    <div>SCORE <span id="final-score">0</span></div>
-                    <div>HI <span id="best-score">0</span></div>
+        <canvas id="gameCanvas" width="800" height="300"></canvas>
+        
+        <div id="ui-layer">
+            <div id="start-screen">
+                <h1>LOVE RUN</h1>
+                <p>스페이스바를 눌러 점프하세요</p>
+                <button onclick="startGame()">게임 시작</button>
+            </div>
+            
+            <div id="game-over-screen" class="hidden">
+                <h1>GAME OVER</h1>
+                <p>사랑에는 끈기가 필요한 법!</p>
+                <button onclick="resetGame()">다시 도전</button>
+            </div>
+
+            <div id="clear-screen" class="hidden">
+                <div id="letter-box">
+                    <h1>축하해! ❤️</h1>
+                    <p>
+                        (이곳에 편지 내용을 적어주세요)<br>
+                        장애물을 피하느라 고생했어.<br>
+                        앞으로도 우리 앞에 놓인 장애물들을<br>
+                        이렇게 가볍게 뛰어넘으며 함께하자.<br>
+                        사랑해!
+                    </p>
                 </div>
             </div>
-            <button id="restart-button">TRY AGAIN (FOR HER LOVE)</button>
         </div>
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        const gameOverScreen = document.getElementById('game-over-screen');
-        const finalScoreElement = document.getElementById('final-score');
-        const bestScoreElement = document.getElementById('best-score');
-        const restartButton = document.getElementById('restart-button');
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 게임 상태 변수
+    let frames = 0;
+    let score = 0;
+    let gameSpeed = 4;
+    let isGaming = false;
+    let animationId;
+    const GRAVITY = 0.6;
+    const CLEAR_SCORE = 1000; // 이 점수가 되면 클리어 (편지 나옴)
 
-        let gameSpeed = 5;
-        let score = 0;
-        let highScore = localStorage.getItem('highScore') || 0;
-        let isGameOver = false;
-        let animationId;
-        bestScoreElement.innerText = highScore.toString().padStart(5, '0');
+    // ==========================================
+    // 1. 도트(픽셀) 데이터 정의 (0:투명, 1:색칠)
+    // ==========================================
+    
+    // 분홍 곰 (16x16)
+    const bearSprite = [
+        "0000110000110000",
+        "0001111001111000",
+        "0011111111111100",
+        "0111111111111110",
+        "0110111111110110", // 눈 부분 (0으로 구멍 뚫음)
+        "1111111001111111", // 코 부분
+        "1111111111111111",
+        "1111100000011111", // 입
+        "1111111111111111",
+        "0111111111111110",
+        "0011111111111100",
+        "0001111111111000",
+        "0001100000011000", // 다리 시작
+        "0001100000011000",
+        "0011100000111000",
+        "0011000000110000"
+    ];
 
-        // --- 이미지 로드 ---
-        const images = {};
-        const loadImages = (callback) => {
-            const imageSources = {
-                bearRun1: 'assets/bear_run1.png',
-                bearRun2: 'assets/bear_run2.png',
-                bearJump: 'assets/bear_jump.png',
-                cactus1: 'assets/cactus1.png',
-                cactus2: 'assets/cactus2.png',
-                cactus3: 'assets/cactus3.png',
-                bird1: 'assets/bird1.png',
-                bird2: 'assets/bird2.png',
-                ground: 'assets/ground.png',
-                cloud: 'assets/cloud.png',
-                sun: 'assets/sun.png'
-            };
-            let loadedCount = 0;
-            const totalImages = Object.keys(imageSources).length;
+    // 장애물 (선인장 대신 하트 깨진 모양 등 - 여기선 심플한 벽돌/장애물)
+    const obstacleSprite = [
+        "0001111000",
+        "0011111100",
+        "0111001110",
+        "0110000110",
+        "1111111111",
+        "1101111011",
+        "1101111011",
+        "1111111111"
+    ];
 
-            for (const key in imageSources) {
-                const img = new Image();
-                img.onload = () => {
-                    loadedCount++;
-                    if (loadedCount === totalImages) callback();
-                };
-                img.src = imageSources[key];
-                images[key] = img;
-            }
-        };
+    // 구름
+    const cloudSprite = [
+        "000001111000000",
+        "000111111110000",
+        "011111111111100",
+        "111111111111110",
+        "011111111111110",
+        "000111111110000"
+    ];
 
-        // --- 게임 객체 ---
-        const GROUND_HEIGHT = 50;
-        const player = {
-            x: 50,
-            y: canvas.height - GROUND_HEIGHT,
-            width: 50, // 실제 이미지 크기에 맞게 조절
-            height: 60, // 실제 이미지 크기에 맞게 조절
-            vy: 0,
-            jumpPower: -13,
-            gravity: 0.6,
-            onGround: true,
-            frame: 0,
-            frameTimer: 0,
-            draw() {
-                let img;
-                if (!this.onGround) {
-                    img = images.bearJump;
-                } else {
-                    this.frameTimer++;
-                    if (this.frameTimer % 10 === 0) this.frame = (this.frame + 1) % 2;
-                    img = this.frame === 0 ? images.bearRun1 : images.bearRun2;
-                }
-                // 이미지 기준점을 하단 중앙으로 맞춰 그리기
-                ctx.drawImage(img, this.x, this.y - img.height + 5, img.width, img.height);
-                // 충돌 박스 확인용 (주석 처리)
-                // ctx.strokeStyle = 'red'; ctx.strokeRect(this.x, this.y - this.height + 5, this.width, this.height);
-            },
-            jump() {
-                if (this.onGround) {
-                    this.vy = this.jumpPower;
-                    this.onGround = false;
-                }
-            },
-            update() {
-                this.vy += this.gravity;
-                this.y += this.vy;
-                if (this.y > canvas.height - GROUND_HEIGHT) {
-                    this.y = canvas.height - GROUND_HEIGHT;
-                    this.vy = 0;
-                    this.onGround = true;
+    // ==========================================
+    // 2. 도트 그리기 함수 (핵심)
+    // ==========================================
+    function drawPixelArt(ctx, spriteMap, startX, startY, pixelSize, color) {
+        ctx.fillStyle = color;
+        for (let row = 0; row < spriteMap.length; row++) {
+            const line = spriteMap[row];
+            for (let col = 0; col < line.length; col++) {
+                if (line[col] === '1') {
+                    ctx.fillRect(startX + col * pixelSize, startY + row * pixelSize, pixelSize, pixelSize);
                 }
             }
-        };
+        }
+    }
 
-        let obstacles = [];
-        const obstacleTypes = [
-            { type: 'cactus', imgs: ['cactus1', 'cactus2', 'cactus3'], yOffset: 0 },
-            { type: 'bird', imgs: ['bird1', 'bird2'], yOffset: [40, 80, 120], speed: 2 }
-        ];
+    // ==========================================
+    // 3. 게임 객체 클래스
+    // ==========================================
 
-        function spawnObstacle() {
-            if (isGameOver) return;
-            const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-            const imgKey = type.imgs[Math.floor(Math.random() * type.imgs.length)];
-            const img = images[imgKey];
-            let y = canvas.height - GROUND_HEIGHT - img.height + type.yOffset;
-            let speed = gameSpeed;
-
-            if (type.type === 'bird') {
-                 y = canvas.height - GROUND_HEIGHT - img.height - type.yOffset[Math.floor(Math.random() * type.yOffset.length)];
-                 speed += type.speed;
-            }
-
-            obstacles.push({
-                x: canvas.width,
-                y: y,
-                width: img.width,
-                height: img.height,
-                img: img,
-                type: type.type,
-                frame: 0,
-                frameTimer: 0,
-                speed: speed
-            });
-
-            const nextSpawnTime = Math.random() * 1500 + 800; // 0.8 ~ 2.3초 랜덤 스폰
-            setTimeout(spawnObstacle, nextSpawnTime);
+    class Player {
+        constructor() {
+            this.width = 48;  // 16칸 * 3px
+            this.height = 48; // 16칸 * 3px
+            this.x = 50;
+            this.y = 200;
+            this.dy = 0;
+            this.jumpPower = -12;
+            this.originalY = 200;
+            this.grounded = true;
+            this.color = '#ff9ff3'; // 곰 색상 (분홍)
         }
 
-        let clouds = [];
-        function spawnCloud() {
-            if(isGameOver) return;
-            const img = images.cloud;
-            clouds.push({
-                x: canvas.width,
-                y: Math.random() * (canvas.height / 2),
-                width: img.width,
-                height: img.height,
-                img: img,
-                speed: gameSpeed * 0.5
-            });
-            setTimeout(spawnCloud, Math.random() * 3000 + 2000);
+        draw() {
+            // 점프 중일 땐 조금 위로, 다리를 움직이는 효과는 생략하고 심플하게
+            drawPixelArt(ctx, bearSprite, this.x, this.y, 3, this.color);
         }
 
-        let groundX = 0;
-        function drawBackground() {
-            // 하늘 (CSS 배경색으로 처리됨)
-            // 해
-            ctx.drawImage(images.sun, canvas.width - 100, 20);
-            // 구름
-            clouds.forEach(cloud => {
-                ctx.drawImage(cloud.img, cloud.x, cloud.y);
-                if(!isGameOver) cloud.x -= cloud.speed;
-            });
-            clouds = clouds.filter(cloud => cloud.x + cloud.width > 0);
-            // 땅
-            const groundImg = images.ground;
-            for (let i = 0; i < canvas.width / groundImg.width + 2; i++) {
-                ctx.drawImage(groundImg, groundX + i * groundImg.width, canvas.height - GROUND_HEIGHT);
-            }
-            if (!isGameOver) {
-                groundX -= gameSpeed;
-                if (groundX <= -groundImg.width) groundX = 0;
-            }
-        }
-
-        function updateGame() {
-            if (isGameOver) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
-            player.update();
-            player.draw();
-
-            obstacles.forEach((obstacle, index) => {
-                obstacle.x -= obstacle.speed;
-                if (obstacle.type === 'bird') {
-                    obstacle.frameTimer++;
-                    if(obstacle.frameTimer % 10 === 0) obstacle.frame = (obstacle.frame + 1) % 2;
-                    obstacle.img = images[obstacleTypes[1].imgs[obstacle.frame]];
-                }
-                ctx.drawImage(obstacle.img, obstacle.x, obstacle.y);
-
-                // 충돌 감지 (AABB)
-                const playerHitbox = { x: player.x + 10, y: player.y - player.height + 10, width: player.width - 20, height: player.height - 10 };
-                const obstacleHitbox = { x: obstacle.x + 5, y: obstacle.y + 5, width: obstacle.width - 10, height: obstacle.height - 10 };
-                // ctx.strokeStyle = 'blue'; ctx.strokeRect(playerHitbox.x, playerHitbox.y, playerHitbox.width, playerHitbox.height);
-                // ctx.strokeStyle = 'red'; ctx.strokeRect(obstacleHitbox.x, obstacleHitbox.y, obstacleHitbox.width, obstacleHitbox.height);
-
-                if (
-                    playerHitbox.x < obstacleHitbox.x + obstacleHitbox.width &&
-                    playerHitbox.x + playerHitbox.width > obstacleHitbox.x &&
-                    playerHitbox.y < obstacleHitbox.y + obstacleHitbox.height &&
-                    playerHitbox.y + playerHitbox.height > obstacleHitbox.y
-                ) {
-                    gameOver();
-                }
-
-                if (obstacle.x + obstacle.width < 0) {
-                    obstacles.splice(index, 1);
-                    score++;
-                }
-            });
-
-            score++;
-            if(score % 500 === 0) gameSpeed += 0.5; // 점수에 따라 속도 증가
-            updateScoreDisplay();
-
-            animationId = requestAnimationFrame(updateGame);
-        }
-
-        function updateScoreDisplay() {
-            const scoreStr = Math.floor(score / 10).toString().padStart(5, '0');
-            const highScoreStr = highScore.toString().padStart(5, '0');
-            scoreElement.innerHTML = `SCORE: ${scoreStr}<br>HI: ${highScoreStr}`;
-        }
-
-        function gameOver() {
-            isGameOver = true;
-            cancelAnimationFrame(animationId);
-            const finalScore = Math.floor(score / 10);
-            if (finalScore > highScore) {
-                highScore = finalScore;
-                localStorage.setItem('highScore', highScore);
-            }
-            finalScoreElement.innerText = finalScore.toString().padStart(5, '0');
-            bestScoreElement.innerText = highScore.toString().padStart(5, '0');
-            gameOverScreen.style.display = 'block';
-        }
-
-        function resetGame() {
-            isGameOver = false;
-            score = 0;
-            gameSpeed = 5;
-            obstacles = [];
-            clouds = [];
-            player.y = canvas.height - GROUND_HEIGHT;
-            player.vy = 0;
-            gameOverScreen.style.display = 'none';
-            spawnObstacle();
-            spawnCloud();
-            updateGame();
-        }
-
-        // --- 이벤트 리스너 ---
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                if (isGameOver) {
-                    resetGame();
-                } else {
-                    player.jump();
-                }
-            }
-        });
-        canvas.addEventListener('touchstart', (e) => {
-             if (isGameOver) {
-                resetGame();
+        update() {
+            // 점프 로직
+            if (this.y < this.originalY) {
+                this.dy += GRAVITY;
+                this.grounded = false;
             } else {
-                player.jump();
+                this.dy = 0;
+                this.y = this.originalY;
+                this.grounded = true;
             }
-            e.preventDefault();
-        }, { passive: false });
+            this.y += this.dy;
+            this.draw();
+        }
 
-        restartButton.addEventListener('click', resetGame);
+        jump() {
+            if (this.grounded) {
+                this.dy = this.jumpPower;
+            }
+        }
+    }
 
-        // --- 게임 시작 ---
-        // 이미지 로드 후 게임 시작
-        loadImages(() => {
-            spawnObstacle();
-            spawnCloud();
-            updateGame();
-        });
-        // 이미지 파일이 없을 경우를 대비해 임시 실행 (이미지 파일 준비 후 제거)
-        // spawnObstacle(); spawnCloud(); updateGame();
+    class Obstacle {
+        constructor() {
+            this.w = 30;
+            this.h = 40; // 8칸 * 5px
+            this.x = canvas.width;
+            this.y = 210; // 바닥 위치에 맞춤
+            this.color = '#54a0ff'; // 장애물 색상 (파랑)
+        }
 
-    </script>
+        draw() {
+            drawPixelArt(ctx, obstacleSprite, this.x, this.y, 4, this.color);
+        }
+
+        update() {
+            this.x -= gameSpeed;
+            this.draw();
+        }
+    }
+
+    class Cloud {
+        constructor() {
+            this.x = canvas.width + Math.random() * 200;
+            this.y = Math.random() * 100;
+            this.speed = Math.random() * 1 + 0.5;
+        }
+        draw() {
+            drawPixelArt(ctx, cloudSprite, this.x, this.y, 4, '#dfe4ea');
+        }
+        update() {
+            this.x -= this.speed;
+            if (this.x < -100) this.x = canvas.width;
+            this.draw();
+        }
+    }
+
+    // ==========================================
+    // 4. 게임 루프 및 제어
+    // ==========================================
+    
+    let player;
+    let obstacles = [];
+    let clouds = [];
+    
+    function init() {
+        player = new Player();
+        obstacles = [];
+        clouds = [];
+        score = 0;
+        frames = 0;
+        gameSpeed = 4;
+        
+        // 구름 몇 개 생성
+        for(let i=0; i<3; i++) clouds.push(new Cloud());
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('clear-screen').classList.add('hidden');
+        isGaming = true;
+        init();
+        animate();
+    }
+
+    function resetGame() {
+        startGame();
+    }
+
+    function animate() {
+        if (!isGaming) return;
+        
+        animationId = requestAnimationFrame(animate);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 배경(구름)
+        clouds.forEach(c => c.update());
+
+        // 바닥 선
+        ctx.beginPath();
+        ctx.moveTo(0, 248);
+        ctx.lineTo(canvas.width, 248);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 플레이어
+        player.update();
+
+        // 장애물 관리
+        if (frames % 120 === 0) { // 장애물 생성 주기
+            obstacles.push(new Obstacle());
+            gameSpeed += 0.1; // 점점 빨라짐
+        }
+
+        for (let i = 0; i < obstacles.length; i++) {
+            let o = obstacles[i];
+            o.update();
+
+            // 충돌 체크 (단순 사각형 충돌)
+            if (player.x < o.x + o.w &&
+                player.x + player.width > o.x &&
+                player.y < o.y + o.h &&
+                player.y + player.height > o.y) {
+                
+                gameOver();
+            }
+
+            // 화면 밖으로 나가면 제거
+            if (o.x + o.w < 0) {
+                obstacles.splice(i, 1);
+                i--;
+                score += 10;
+            }
+        }
+
+        // 점수 표시
+        ctx.fillStyle = '#333';
+        ctx.font = '20px VT323';
+        ctx.fillText("SCORE: " + score, 20, 30);
+
+        // 클리어 조건 (예: 점수 1000점)
+        if (score >= CLEAR_SCORE) {
+            gameClear();
+        }
+
+        frames++;
+    }
+
+    function gameOver() {
+        isGaming = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('game-over-screen').classList.remove('hidden');
+    }
+
+    function gameClear() {
+        isGaming = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById('clear-screen').classList.remove('hidden');
+    }
+
+    // 키보드 이벤트
+    window.addEventListener('keydown', function(e) {
+        if (e.code === 'Space') {
+            if (isGaming) {
+                player.jump();
+            } else if (!document.getElementById('start-screen').classList.contains('hidden')) {
+                // 시작 화면일 때 스페이스 누르면 시작
+                startGame();
+            }
+        }
+    });
+
+    // 모바일 터치 이벤트
+    window.addEventListener('touchstart', function(e) {
+        if (isGaming) {
+            player.jump();
+        }
+    });
+
+</script>
 </body>
 </html>
