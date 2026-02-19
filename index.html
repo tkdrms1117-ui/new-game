@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Love Flight</title>
+    <title>Space Survival</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
@@ -13,16 +13,16 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #222;
+            background-color: #1a1a1a;
             font-family: 'VT323', monospace;
             overflow: hidden;
         }
 
         #game-container {
             position: relative;
-            border: 4px solid #fff;
+            border: 4px solid #444;
             background-color: #000;
-            box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
             width: 800px;
             height: 400px;
         }
@@ -46,48 +46,44 @@
             align-items: center;
             text-align: center;
             color: white;
+            z-index: 10;
         }
 
         .hidden { display: none !important; }
 
         h1 { 
-            font-size: 50px; 
+            font-size: 60px; 
             margin: 0 0 20px 0; 
-            color: #ff69b4; 
+            color: #00d2d3; 
             text-shadow: 4px 4px 0 #333; 
             letter-spacing: 5px;
         }
         
-        p { font-size: 24px; color: #ddd; margin-bottom: 30px; }
+        p { font-size: 24px; color: #ccc; margin-bottom: 30px; }
 
         .btn {
             pointer-events: auto;
-            background: #ff69b4;
+            background: #00d2d3;
             border: 2px solid white;
-            color: white;
+            color: #000;
             padding: 15px 30px;
             font-family: 'VT323', monospace;
             font-size: 24px;
+            font-weight: bold;
             cursor: pointer;
             transition: transform 0.1s;
         }
-        .btn:hover { background-color: #ff1493; }
+        .btn:hover { background-color: #00a8a9; color: white; }
         .btn:active { transform: scale(0.95); }
 
-        #letter-box {
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            border: 4px solid #ff69b4;
+        /* Report Box Style */
+        #report-box {
+            background: rgba(0, 0, 0, 0.9);
+            color: #00d2d3;
+            border: 2px solid #00d2d3;
             padding: 30px;
             max-width: 80%;
-            border-radius: 10px;
-            animation: popIn 0.5s ease;
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0); }
-            80% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+            box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
         }
     </style>
 </head>
@@ -97,25 +93,31 @@
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
         <div id="ui-layer">
+            <!-- Start Screen -->
             <div id="start-screen">
-                <h1>LOVE FLIGHT</h1>
-                <p>방향키 [↑] [↓] 로 장애물을 피하세요</p>
-                <button class="btn" onclick="startGame()">MISSION START</button>
+                <h1>SPACE SURVIVAL</h1>
+                <p>USE ARROW KEYS [↑] [↓] [←] [→] TO SURVIVE</p>
+                <button class="btn" onclick="startGame()">LAUNCH</button>
             </div>
             
+            <!-- Game Over Screen -->
             <div id="game-over-screen" class="hidden">
-                <h1 style="color: #ff4757;">CRASHED!</h1>
-                <p><br>다시 도전할까요?</p>
-                <button class="btn" onclick="startGame()">TRY AGAIN</button>
+                <h1 style="color: #ff4757;">CRITICAL FAILURE</h1>
+                <p>COLLISION DETECTED</p>
+                <button class="btn" onclick="startGame()">RETRY MISSION</button>
             </div>
 
+            <!-- Clear Screen -->
             <div id="clear-screen" class="hidden">
-                <div id="letter-box">
-                    <h2 style="color:#ff69b4; margin-top:0;"></h2>
-                    <p style="font-size: 20px; color: #444; line-height: 1.6;">
-
+                <div id="report-box">
+                    <h2 style="margin-top:0;">MISSION ACCOMPLISHED</h2>
+                    <p style="font-size: 20px; color: #fff; line-height: 1.6;">
+                        You have successfully navigated through the asteroid belt.<br>
+                        Orbit stabilized.<br>
+                        System integrity: 100%<br><br>
+                        Waiting for next command...
                     </p>
-                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">처음으로</button>
+                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">RETURN TO BASE</button>
                 </div>
             </div>
         </div>
@@ -126,54 +128,96 @@
     const ctx = canvas.getContext('2d');
     
     // ==========================================
-    // 1. 도트 데이터 (플레이어 캐릭터 수정됨)
+    // 1. Sprite Data (16x16 High Detail)
     // ==========================================
     
-    // 플레이어: 분홍색 캐릭터 (12x12)
-    // 0: 투명, 1: 연분홍, 2: 진분홍 (코, 배), 3: 갈색 (외곽선)
+    // 0: Trans, 1: Light Pink, 2: Dark Pink, 3: Brown(Outline), 4: White(Highlight), 5: Red(Heart/Cheek)
     const playerSprite = [
-        "000333333000",
-        "003111111300",
-        "031311113130",
-        "311111111113",
-        "311311113113",
-        "311112211113",
-        "311121121113",
-        "031122221130",
-        "031111111130",
-        "003121121300",
-        "003212212300",
-        "000333333000"
+        "0000003333330000",
+        "0000331111113300",
+        "0003111111111130",
+        "0031111111111113",
+        "0311111111111113",
+        "0311331111331113", // Eyes
+        "3111331111331113",
+        "3111111221111113", // Nose
+        "3115111221115113", // Cheeks
+        "3111111111111113",
+        "0311111111111130",
+        "0321111111111230",
+        "0032211111122300",
+        "0003322222233000",
+        "0000033333300000",
+        "0000000000000000"
     ];
 
-    const wallTop = [
-        "111111", "111111", "011110", "001100", "001100", "001100", "000100"
+    // Meteor (Asteroid) - Irregular Shape
+    // 1: Gray, 2: Dark Gray, 3: Black outline
+    const meteorSprite = [
+        "000033330000",
+        "003311113300",
+        "031112211130",
+        "311222221113",
+        "312211112213",
+        "312112211213",
+        "311222221113",
+        "311111111113",
+        "031112211130",
+        "003311113300",
+        "000033330000"
     ];
-    const wallBottom = [
-        "000100", "001100", "001100", "001100", "011110", "111111", "111111"
+
+    // Space Debris (Satellite part)
+    // 1: Blue, 2: Metal/Gray, 3: Outline
+    const debrisSprite = [
+        "000000330000",
+        "000003113000",
+        "000031111300",
+        "000322222230",
+        "003222222223",
+        "0311112211113",
+        "31111122111113",
+        "0311112211113",
+        "003222222223",
+        "000322222230",
+        "000031111300",
+        "000003113000"
     ];
-    const block = [
-        "00111100", "01111110", "11000011", "11000011", "11000011", "01111110", "00111100"
+
+    // Small Rock
+    const rockSprite = [
+        "003330",
+        "031113",
+        "312213",
+        "311123",
+        "033330"
     ];
 
     // ==========================================
-    // 2. 게임 변수
+    // 2. Game Variables
     // ==========================================
     let animationId;
     let isGaming = false;
     let score = 0;
     let gameSpeed = 5;
-    let spawnRate = 90;
+    let spawnRate = 60; // Spawn faster start
     let frames = 0;
 
-    const keys = { ArrowUp: false, ArrowDown: false };
-    const CLEAR_SCORE = 1500;
+    const keys = { 
+        ArrowUp: false, 
+        ArrowDown: false, 
+        ArrowLeft: false, 
+        ArrowRight: false 
+    };
+    
+    // Clear Score
+    const CLEAR_SCORE = 3000; 
 
     // ==========================================
-    // 3. 클래스 정의 (drawSprite 함수 수정됨)
+    // 3. Classes
     // ==========================================
 
-    // 픽셀 그리기 함수 - 색상표 지원
+    // Pixel Draw Function
     function drawSprite(ctx, sprite, x, y, size, colorMap) {
         for (let r = 0; r < sprite.length; r++) {
             for (let c = 0; c < sprite[r].length; c++) {
@@ -188,37 +232,45 @@
 
     class Player {
         constructor() {
-            this.pixelSize = 4;
-            this.w = 12 * this.pixelSize;
-            this.h = 12 * this.pixelSize;
+            this.pixelSize = 3; // Make pixels a bit smaller for higher detail feel
+            this.w = 16 * this.pixelSize;
+            this.h = 16 * this.pixelSize;
             this.x = 50;
             this.y = 200;
-            this.speed = 6;
-            // 플레이어 색상표 정의
+            this.speedX = 6;
+            this.speedY = 6;
+            
+            // Player Color Map (Pink Bear)
             this.colorMap = {
-                '1': '#ffb6c1', // 연분홍
-                '2': '#ff69b4', // 진분홍
-                '3': '#8b4513'  // 갈색 (외곽선)
-            };
-            this.shadowColorMap = {
-                '1': 'rgba(0,0,0,0.5)', '2': 'rgba(0,0,0,0.5)', '3': 'rgba(0,0,0,0.5)'
+                '1': '#ffb6c1', // Light Pink
+                '2': '#ff69b4', // Dark Pink
+                '3': '#5d4037', // Brown Outline
+                '4': '#ffffff', // White
+                '5': '#ff4757'  // Red Cheek
             };
         }
 
         update() {
-            if (keys.ArrowUp) this.y -= this.speed;
-            if (keys.ArrowDown) this.y += this.speed;
+            // Movement Logic
+            if (keys.ArrowUp) this.y -= this.speedY;
+            if (keys.ArrowDown) this.y += this.speedY;
+            if (keys.ArrowLeft) this.x -= this.speedX;
+            if (keys.ArrowRight) this.x += this.speedX;
 
+            // Boundary Check
             if (this.y < 0) this.y = 0;
             if (this.y + this.h > canvas.height) this.y = canvas.height - this.h;
+            if (this.x < 0) this.x = 0;
+            if (this.x + this.w > canvas.width) this.x = canvas.width - this.w;
 
             this.draw();
         }
 
         draw() {
-            // 그림자
-            drawSprite(ctx, playerSprite, this.x + 4, this.y + 4, this.pixelSize, this.shadowColorMap);
-            // 본체
+            // Engine Trail (Simple effect)
+            ctx.fillStyle = `rgba(0, 255, 255, ${Math.random()})`;
+            ctx.fillRect(this.x - 10, this.y + this.h/2 - 2, 10, 4);
+
             drawSprite(ctx, playerSprite, this.x, this.y, this.pixelSize, this.colorMap);
         }
     }
@@ -226,57 +278,60 @@
     class Obstacle {
         constructor() {
             this.x = canvas.width;
-            this.size = 5;
+            this.size = 3 + Math.random() * 2; // Random size
             this.markedForDeletion = false;
-
+            
+            // Randomly choose obstacle type
             const type = Math.random();
             
-            if (type < 0.33) {
-                this.sprite = wallBottom;
-                this.w = 6 * this.size;
-                this.h = 7 * this.size;
-                this.renderH = Math.random() * 50 + 50; 
-                this.y = canvas.height - this.renderH;
-                this.color = '#ff4757';
-                this.mode = 'bottom';
-            } else if (type < 0.66) {
-                this.sprite = wallTop;
-                this.w = 6 * this.size;
-                this.renderH = Math.random() * 50 + 50;
-                this.y = 0;
-                this.color = '#7bed9f';
-                this.mode = 'top';
+            if (type < 0.5) {
+                // Meteor
+                this.sprite = meteorSprite;
+                this.colorMap = {
+                    '1': '#95a5a6', // Gray
+                    '2': '#7f8c8d', // Dark Gray
+                    '3': '#2c3e50'  // Dark Blue/Black
+                };
+                this.w = 12 * this.size;
+                this.h = 11 * this.size;
+            } else if (type < 0.8) {
+                // Debris
+                this.sprite = debrisSprite;
+                this.colorMap = {
+                    '1': '#3498db', // Blue
+                    '2': '#bdc3c7', // Silver
+                    '3': '#2c3e50'  // Dark
+                };
+                this.w = 12 * this.size;
+                this.h = 12 * this.size;
             } else {
-                this.sprite = block;
-                this.w = 8 * this.size;
-                this.h = 7 * this.size;
-                this.y = Math.random() * (canvas.height - 100) + 50;
-                this.renderH = this.h;
-                this.color = '#ffa502';
-                this.mode = 'mid';
+                // Small Rock (Fast)
+                this.sprite = rockSprite;
+                this.colorMap = {
+                    '1': '#e67e22', // Orangeish
+                    '2': '#d35400',
+                    '3': '#8e44ad'
+                };
+                this.w = 6 * this.size;
+                this.h = 5 * this.size;
             }
-            // 장애물용 단순 색상표
-            this.colorMap = { '1': this.color };
+
+            // Spawn Y position
+            this.y = Math.random() * (canvas.height - this.h);
+            
+            // Individual speed variance
+            this.speedOffset = Math.random() * 3; 
         }
 
         update() {
-            this.x -= gameSpeed;
+            this.x -= (gameSpeed + this.speedOffset);
+            
             if (this.x + this.w < 0) this.markedForDeletion = true;
             this.draw();
         }
 
         draw() {
-            if (this.mode === 'bottom') {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x + this.size, this.y + 20, this.w - this.size*2, canvas.height); 
-                drawSprite(ctx, this.sprite, this.x, this.y, this.size, this.colorMap);
-            } else if (this.mode === 'top') {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x + this.size, 0, this.w - this.size*2, this.renderH);
-                drawSprite(ctx, this.sprite, this.x, this.renderH - 10, this.size, this.colorMap);
-            } else {
-                drawSprite(ctx, this.sprite, this.x, this.y, this.size, this.colorMap);
-            }
+            drawSprite(ctx, this.sprite, this.x, this.y, this.size, this.colorMap);
         }
     }
 
@@ -288,18 +343,18 @@
             this.speed = Math.random() * 0.5 + 0.1;
         }
         update() {
-            this.x -= this.speed * (gameSpeed * 0.5);
+            this.x -= this.speed * (gameSpeed * 0.2); // Background moves slower
             if (this.x < 0) {
                 this.x = canvas.width;
                 this.y = Math.random() * canvas.height;
             }
-            ctx.fillStyle = 'white';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.fillRect(this.x, this.y, this.size, this.size);
         }
     }
 
     // ==========================================
-    // 4. 메인 로직
+    // 4. Main Game Logic
     // ==========================================
     
     let player;
@@ -311,11 +366,11 @@
         obstacles = [];
         score = 0;
         frames = 0;
-        gameSpeed = 5;
-        spawnRate = 90;
+        gameSpeed = 6; // Initial Speed increased
+        spawnRate = 50; 
         
         stars = [];
-        for(let i=0; i<50; i++) stars.push(new Star());
+        for(let i=0; i<80; i++) stars.push(new Star());
     }
 
     function startGame() {
@@ -333,46 +388,77 @@
         animationId = requestAnimationFrame(animate);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // 1. Background
         stars.forEach(star => star.update());
 
         frames++;
-        if (score > 0 && score % 500 === 0 && frames % 60 === 0) {
-            gameSpeed += 0.5;
-            spawnRate = Math.max(40, spawnRate - 5);
+        
+        // Difficulty Logic: Faster increase
+        // Increase speed every 200 points (was 500)
+        if (score > 0 && score % 200 === 0 && frames % 10 === 0) {
+            gameSpeed += 0.8; // Increase amount up
+            spawnRate = Math.max(15, spawnRate - 2); // Cap at 15 frames
         }
 
+        // Spawn Obstacles
         if (frames % spawnRate === 0) {
             obstacles.push(new Obstacle());
-            frames += Math.floor(Math.random() * 20) - 10; 
+            // Add randomness to spawn timing
+            frames += Math.floor(Math.random() * 10) - 5; 
         }
 
+        // Obstacle Logic
         obstacles.forEach((o, index) => {
             o.update();
-            const pBox = { x: player.x+5, y: player.y+5, w: player.w-10, h: player.h-10 };
-            let oBox = { x: o.x+5, y: o.y+5, w: o.w-10, h: o.renderH || o.h };
-            if (o.mode === 'bottom') oBox.h = 1000;
-            if (o.mode === 'top') { oBox.y = 0; oBox.h = o.renderH; }
+            
+            // Collision Detection (Box)
+            // Shrink hitbox slightly for fairness
+            const pBox = { 
+                x: player.x + 8, 
+                y: player.y + 8, 
+                w: player.w - 16, 
+                h: player.h - 16 
+            };
+            const oBox = { 
+                x: o.x + 4, 
+                y: o.y + 4, 
+                w: o.w - 8, 
+                h: o.h - 8 
+            };
 
-            if (pBox.x < oBox.x + oBox.w && pBox.x + pBox.w > oBox.x &&
-                pBox.y < oBox.y + oBox.h && pBox.y + pBox.h > oBox.y) {
+            if (
+                pBox.x < oBox.x + oBox.w &&
+                pBox.x + pBox.w > oBox.x &&
+                pBox.y < oBox.y + oBox.h &&
+                pBox.y + pBox.h > oBox.y
+            ) {
                 gameOver();
             }
+
+            // Remove off-screen
             if (o.markedForDeletion) {
                 obstacles.splice(index, 1);
                 score += 10;
             }
         });
 
+        // Player Logic
         player.update();
 
-        ctx.fillStyle = 'white';
+        // UI
+        ctx.fillStyle = '#00d2d3';
         ctx.font = '24px VT323';
         ctx.fillText(`SCORE: ${score}`, 20, 40);
-        ctx.fillStyle = '#aaa';
-        ctx.font = '16px VT323';
-        ctx.fillText(`SPEED: ${gameSpeed.toFixed(1)}`, 20, 65);
+        
+        // Speed Meter
+        ctx.fillStyle = '#ff6b6b';
+        ctx.font = '20px VT323';
+        ctx.fillText(`VELOCITY: ${(gameSpeed * 10).toFixed(0)} km/s`, 20, 70);
 
-        if (score >= CLEAR_SCORE) gameClear();
+        // Clear Check
+        if (score >= CLEAR_SCORE) {
+            gameClear();
+        }
     }
 
     function gameOver() {
@@ -387,16 +473,20 @@
         document.getElementById('clear-screen').classList.remove('hidden');
     }
 
+    // Input Handling
     window.addEventListener('keydown', e => {
-        if (e.code === 'ArrowUp') keys.ArrowUp = true;
-        if (e.code === 'ArrowDown') keys.ArrowDown = true;
-        if(['ArrowUp', 'ArrowDown', 'Space'].indexOf(e.code) > -1) e.preventDefault();
+        if (keys.hasOwnProperty(e.code)) {
+            keys[e.code] = true;
+            e.preventDefault();
+        }
     });
 
     window.addEventListener('keyup', e => {
-        if (e.code === 'ArrowUp') keys.ArrowUp = false;
-        if (e.code === 'ArrowDown') keys.ArrowDown = false;
+        if (keys.hasOwnProperty(e.code)) {
+            keys[e.code] = false;
+        }
     });
+
 </script>
 </body>
 </html>
