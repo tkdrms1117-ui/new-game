@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Space Survival</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
@@ -16,6 +16,7 @@
             background-color: #1a1a1a;
             font-family: 'VT323', monospace;
             overflow: hidden;
+            touch-action: none; /* Disable double-tap zoom */
         }
 
         #game-container {
@@ -23,8 +24,12 @@
             border: 4px solid #444;
             background-color: #000;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
-            width: 800px;
-            height: 400px;
+            
+            /* Responsive Sizing */
+            width: 95vw;
+            max-width: 800px;
+            aspect-ratio: 2 / 1; 
+            height: auto;
         }
 
         canvas {
@@ -51,15 +56,18 @@
 
         .hidden { display: none !important; }
 
+        /* Responsive Text Sizes */
         h1 { 
-            font-size: 60px; 
+            font-size: 5vw; 
             margin: 0 0 20px 0; 
             color: #00d2d3; 
             text-shadow: 4px 4px 0 #333; 
             letter-spacing: 5px;
         }
+        @media (min-width: 800px) { h1 { font-size: 60px; } }
         
-        p { font-size: 24px; color: #ccc; margin-bottom: 30px; }
+        p { font-size: 2.5vw; color: #ccc; margin-bottom: 30px; }
+        @media (min-width: 800px) { p { font-size: 24px; } }
 
         .btn {
             pointer-events: auto;
@@ -76,27 +84,74 @@
         .btn:hover { background-color: #00a8a9; color: white; }
         .btn:active { transform: scale(0.95); }
 
-        /* Report Box Style */
         #report-box {
             background: rgba(0, 0, 0, 0.9);
             color: #00d2d3;
             border: 2px solid #00d2d3;
-            padding: 30px;
+            padding: 20px;
             max-width: 80%;
             box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
+        }
+
+        /* Mobile Controls (D-Pad) */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 20;
+            display: none; /* Hidden on desktop by default, shown via JS/Media Query */
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            opacity: 0.7;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .d-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            touch-action: none;
+            cursor: pointer;
+        }
+        
+        .d-btn:active {
+            background: rgba(0, 210, 211, 0.6);
+            transform: scale(0.95);
+        }
+
+        /* Show controls on touch devices or small screens */
+        @media (hover: none) and (pointer: coarse), (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+            }
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <!-- Internal resolution fixed at 800x400 for logic, CSS handles display size -->
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
         <div id="ui-layer">
             <!-- Start Screen -->
             <div id="start-screen">
                 <h1>SPACE SURVIVAL</h1>
-                <p>USE ARROW KEYS [↑] [↓] [←] [→] TO SURVIVE</p>
+                <p>PC: ARROW KEYS / MOBILE: TOUCH PAD</p>
                 <button class="btn" onclick="startGame()">LAUNCH</button>
             </div>
             
@@ -111,14 +166,28 @@
             <div id="clear-screen" class="hidden">
                 <div id="report-box">
                     <h2 style="margin-top:0;">MISSION ACCOMPLISHED</h2>
-                    <p style="font-size: 20px; color: #fff; line-height: 1.6;">
-                        You have successfully navigated through the asteroid belt.<br>
+                    <p style="font-size: 16px; color: #fff; line-height: 1.6;">
                         Orbit stabilized.<br>
                         System integrity: 100%<br><br>
                         Waiting for next command...
                     </p>
-                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">RETURN TO BASE</button>
+                    <button class="btn" style="font-size:18px; padding:10px 20px;" onclick="location.reload()">RETURN</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls Overlay -->
+        <div id="mobile-controls">
+            <div class="control-row">
+                <div class="d-btn" id="btn-up">▲</div>
+            </div>
+            <div class="control-row">
+                <div class="d-btn" id="btn-left">◀</div>
+                <div class="d-btn" style="visibility: hidden;"></div> <!-- Spacer -->
+                <div class="d-btn" id="btn-right">▶</div>
+            </div>
+            <div class="control-row">
+                <div class="d-btn" id="btn-down">▼</div>
             </div>
         </div>
     </div>
@@ -128,20 +197,19 @@
     const ctx = canvas.getContext('2d');
     
     // ==========================================
-    // 1. Sprite Data (16x16 High Detail)
+    // 1. Sprite Data
     // ==========================================
     
-    // 0: Trans, 1: Light Pink, 2: Dark Pink, 3: Brown(Outline), 4: White(Highlight), 5: Red(Heart/Cheek)
     const playerSprite = [
         "0000003333330000",
         "0000331111113300",
         "0003111111111130",
         "0031111111111113",
         "0311111111111113",
-        "0311331111331113", // Eyes
+        "0311331111331113", 
         "3111331111331113",
-        "3111111221111113", // Nose
-        "3115111221115113", // Cheeks
+        "3111111221111113", 
+        "3115111221115113", 
         "3111111111111113",
         "0311111111111130",
         "0321111111111230",
@@ -151,8 +219,6 @@
         "0000000000000000"
     ];
 
-    // Meteor (Asteroid) - Irregular Shape
-    // 1: Gray, 2: Dark Gray, 3: Black outline
     const meteorSprite = [
         "000033330000",
         "003311113300",
@@ -167,8 +233,6 @@
         "000033330000"
     ];
 
-    // Space Debris (Satellite part)
-    // 1: Blue, 2: Metal/Gray, 3: Outline
     const debrisSprite = [
         "000000330000",
         "000003113000",
@@ -184,7 +248,6 @@
         "000003113000"
     ];
 
-    // Small Rock
     const rockSprite = [
         "003330",
         "031113",
@@ -200,7 +263,7 @@
     let isGaming = false;
     let score = 0;
     let gameSpeed = 5;
-    let spawnRate = 60; // Spawn faster start
+    let spawnRate = 60; 
     let frames = 0;
 
     const keys = { 
@@ -210,14 +273,12 @@
         ArrowRight: false 
     };
     
-    // Clear Score
     const CLEAR_SCORE = 3000; 
 
     // ==========================================
     // 3. Classes
     // ==========================================
 
-    // Pixel Draw Function
     function drawSprite(ctx, sprite, x, y, size, colorMap) {
         for (let r = 0; r < sprite.length; r++) {
             for (let c = 0; c < sprite[r].length; c++) {
@@ -232,7 +293,7 @@
 
     class Player {
         constructor() {
-            this.pixelSize = 3; // Make pixels a bit smaller for higher detail feel
+            this.pixelSize = 3; 
             this.w = 16 * this.pixelSize;
             this.h = 16 * this.pixelSize;
             this.x = 50;
@@ -240,24 +301,21 @@
             this.speedX = 6;
             this.speedY = 6;
             
-            // Player Color Map (Pink Bear)
             this.colorMap = {
-                '1': '#ffb6c1', // Light Pink
-                '2': '#ff69b4', // Dark Pink
-                '3': '#5d4037', // Brown Outline
-                '4': '#ffffff', // White
-                '5': '#ff4757'  // Red Cheek
+                '1': '#ffb6c1', 
+                '2': '#ff69b4', 
+                '3': '#5d4037', 
+                '4': '#ffffff', 
+                '5': '#ff4757'  
             };
         }
 
         update() {
-            // Movement Logic
             if (keys.ArrowUp) this.y -= this.speedY;
             if (keys.ArrowDown) this.y += this.speedY;
             if (keys.ArrowLeft) this.x -= this.speedX;
             if (keys.ArrowRight) this.x += this.speedX;
 
-            // Boundary Check
             if (this.y < 0) this.y = 0;
             if (this.y + this.h > canvas.height) this.y = canvas.height - this.h;
             if (this.x < 0) this.x = 0;
@@ -267,10 +325,8 @@
         }
 
         draw() {
-            // Engine Trail (Simple effect)
             ctx.fillStyle = `rgba(0, 255, 255, ${Math.random()})`;
             ctx.fillRect(this.x - 10, this.y + this.h/2 - 2, 10, 4);
-
             drawSprite(ctx, playerSprite, this.x, this.y, this.pixelSize, this.colorMap);
         }
     }
@@ -278,54 +334,34 @@
     class Obstacle {
         constructor() {
             this.x = canvas.width;
-            this.size = 3 + Math.random() * 2; // Random size
+            this.size = 3 + Math.random() * 2; 
             this.markedForDeletion = false;
             
-            // Randomly choose obstacle type
             const type = Math.random();
             
             if (type < 0.5) {
-                // Meteor
                 this.sprite = meteorSprite;
-                this.colorMap = {
-                    '1': '#95a5a6', // Gray
-                    '2': '#7f8c8d', // Dark Gray
-                    '3': '#2c3e50'  // Dark Blue/Black
-                };
+                this.colorMap = { '1': '#95a5a6', '2': '#7f8c8d', '3': '#2c3e50' };
                 this.w = 12 * this.size;
                 this.h = 11 * this.size;
             } else if (type < 0.8) {
-                // Debris
                 this.sprite = debrisSprite;
-                this.colorMap = {
-                    '1': '#3498db', // Blue
-                    '2': '#bdc3c7', // Silver
-                    '3': '#2c3e50'  // Dark
-                };
+                this.colorMap = { '1': '#3498db', '2': '#bdc3c7', '3': '#2c3e50' };
                 this.w = 12 * this.size;
                 this.h = 12 * this.size;
             } else {
-                // Small Rock (Fast)
                 this.sprite = rockSprite;
-                this.colorMap = {
-                    '1': '#e67e22', // Orangeish
-                    '2': '#d35400',
-                    '3': '#8e44ad'
-                };
+                this.colorMap = { '1': '#e67e22', '2': '#d35400', '3': '#8e44ad' };
                 this.w = 6 * this.size;
                 this.h = 5 * this.size;
             }
 
-            // Spawn Y position
             this.y = Math.random() * (canvas.height - this.h);
-            
-            // Individual speed variance
             this.speedOffset = Math.random() * 3; 
         }
 
         update() {
             this.x -= (gameSpeed + this.speedOffset);
-            
             if (this.x + this.w < 0) this.markedForDeletion = true;
             this.draw();
         }
@@ -343,7 +379,7 @@
             this.speed = Math.random() * 0.5 + 0.1;
         }
         update() {
-            this.x -= this.speed * (gameSpeed * 0.2); // Background moves slower
+            this.x -= this.speed * (gameSpeed * 0.2); 
             if (this.x < 0) {
                 this.x = canvas.width;
                 this.y = Math.random() * canvas.height;
@@ -366,7 +402,7 @@
         obstacles = [];
         score = 0;
         frames = 0;
-        gameSpeed = 6; // Initial Speed increased
+        gameSpeed = 6; 
         spawnRate = 50; 
         
         stars = [];
@@ -388,74 +424,47 @@
         animationId = requestAnimationFrame(animate);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 1. Background
         stars.forEach(star => star.update());
 
         frames++;
         
-        // Difficulty Logic: Faster increase
-        // Increase speed every 200 points (was 500)
         if (score > 0 && score % 200 === 0 && frames % 10 === 0) {
-            gameSpeed += 0.8; // Increase amount up
-            spawnRate = Math.max(15, spawnRate - 2); // Cap at 15 frames
+            gameSpeed += 0.8; 
+            spawnRate = Math.max(15, spawnRate - 2); 
         }
 
-        // Spawn Obstacles
         if (frames % spawnRate === 0) {
             obstacles.push(new Obstacle());
-            // Add randomness to spawn timing
             frames += Math.floor(Math.random() * 10) - 5; 
         }
 
-        // Obstacle Logic
         obstacles.forEach((o, index) => {
             o.update();
             
-            // Collision Detection (Box)
-            // Shrink hitbox slightly for fairness
-            const pBox = { 
-                x: player.x + 8, 
-                y: player.y + 8, 
-                w: player.w - 16, 
-                h: player.h - 16 
-            };
-            const oBox = { 
-                x: o.x + 4, 
-                y: o.y + 4, 
-                w: o.w - 8, 
-                h: o.h - 8 
-            };
+            const pBox = { x: player.x + 8, y: player.y + 8, w: player.w - 16, h: player.h - 16 };
+            const oBox = { x: o.x + 4, y: o.y + 4, w: o.w - 8, h: o.h - 8 };
 
-            if (
-                pBox.x < oBox.x + oBox.w &&
-                pBox.x + pBox.w > oBox.x &&
-                pBox.y < oBox.y + oBox.h &&
-                pBox.y + pBox.h > oBox.y
-            ) {
+            if (pBox.x < oBox.x + oBox.w && pBox.x + pBox.w > oBox.x &&
+                pBox.y < oBox.y + oBox.h && pBox.y + pBox.h > oBox.y) {
                 gameOver();
             }
 
-            // Remove off-screen
             if (o.markedForDeletion) {
                 obstacles.splice(index, 1);
                 score += 10;
             }
         });
 
-        // Player Logic
         player.update();
 
-        // UI
         ctx.fillStyle = '#00d2d3';
         ctx.font = '24px VT323';
         ctx.fillText(`SCORE: ${score}`, 20, 40);
         
-        // Speed Meter
         ctx.fillStyle = '#ff6b6b';
         ctx.font = '20px VT323';
         ctx.fillText(`VELOCITY: ${(gameSpeed * 10).toFixed(0)} km/s`, 20, 70);
 
-        // Clear Check
         if (score >= CLEAR_SCORE) {
             gameClear();
         }
@@ -473,7 +482,11 @@
         document.getElementById('clear-screen').classList.remove('hidden');
     }
 
-    // Input Handling
+    // ==========================================
+    // 5. Input Handling (Keyboard & Touch)
+    // ==========================================
+
+    // Keyboard
     window.addEventListener('keydown', e => {
         if (keys.hasOwnProperty(e.code)) {
             keys[e.code] = true;
@@ -486,6 +499,46 @@
             keys[e.code] = false;
         }
     });
+
+    // Mobile Touch Controls Function
+    function bindTouch(elementId, keyCode) {
+        const btn = document.getElementById(elementId);
+        
+        // Touch Start
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default behavior (scroll/zoom)
+            keys[keyCode] = true;
+            btn.style.backgroundColor = 'rgba(0, 210, 211, 0.6)';
+        }, { passive: false });
+
+        // Touch End
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys[keyCode] = false;
+            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+        }, { passive: false });
+
+        // Mouse Events (for testing on PC with mouse)
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            keys[keyCode] = true;
+            btn.style.backgroundColor = 'rgba(0, 210, 211, 0.6)';
+        });
+        btn.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            keys[keyCode] = false;
+            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+        });
+        btn.addEventListener('mouseleave', (e) => {
+            keys[keyCode] = false;
+            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+        });
+    }
+
+    bindTouch('btn-up', 'ArrowUp');
+    bindTouch('btn-down', 'ArrowDown');
+    bindTouch('btn-left', 'ArrowLeft');
+    bindTouch('btn-right', 'ArrowRight');
 
 </script>
 </body>
